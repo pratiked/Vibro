@@ -19,17 +19,58 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     MediaPlayer.OnBufferingUpdateListener, AudioManager.OnAudioFocusChangeListener{
 
     companion object {
-        private const val TAG = "Demo"
+        private const val TAG = "MediaPlayerService"
     }
 
     private val iBinder = LocalBinder()
     private var mediaPlayer: MediaPlayer? = null
-    private val mediaFile: String? = null
+    private var mediaFile: String? = null
     private var resumePosition: Int = 0
     private var audioManager: AudioManager? = null
     private var mAudioFocusRequest: AudioFocusRequest? = null
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        Log.i(TAG, "onStartCommand")
+
+        //An audio file is passed to the service through putExtra()
+        try {
+            mediaFile = intent!!.getStringExtra("media")
+        } catch (e: NullPointerException){
+            Log.e(TAG, "NullPointerException: ", e)
+            stopSelf()
+        }
+
+        //Request audio focus
+        if (!requestAudioFocus()){
+            Log.i(TAG, "no audio focus")
+            //Could not gain focus
+            stopSelf()
+        }
+
+        if (mediaPlayer == null && !mediaFile.equals("")){
+            initMediaPlayer()
+        } else {
+            Log.i(TAG, "either media play is not null or media file is empty")
+        }
+
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        if (mediaPlayer != null){
+            stopMedia()
+            mediaPlayer!!.release()
+        }
+
+        //todo
+        //removeAudioFocus()
+    }
+
     override fun onBind(intent: Intent?): IBinder? {
+        Log.i(TAG, "onBind")
         return iBinder
     }
 
@@ -63,6 +104,8 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
+
+        Log.i(TAG, "onAudioFocusChange")
 
         /*For a good user experience with audio in Android, it is important that the app plays
         nicely with the system and other apps that also play media*/
@@ -108,6 +151,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     }
 
     override fun onPrepared(mp: MediaPlayer?) {
+        Log.i(TAG, "onPrepared")
         playMedia()
     }
 
@@ -146,6 +190,8 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     */
 
     private fun initMediaPlayer() {
+
+        Log.i(TAG, "initMediaPlayer")
 
         mediaPlayer = MediaPlayer()
 

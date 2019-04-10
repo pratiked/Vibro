@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools" package="demo.pratiked.vibro">
-
-    <!--to access media files over the internet-->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <!--to control media playback-->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <!--to listen to events like incoming calls-->
-    <permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+          xmlns:tools="http://schemas.android.com/tools"
+          package="demo.pratiked.vibro">
+    <!-- to access media files over the internet -->
+    <uses-permission android:name="android.permission.INTERNET"/> <!-- to control media playback -->
+    <uses-permission
+            android:name="android.permission.READ_PHONE_STATE"/> <!-- to listen to events like incoming calls -->
+    <permission android:name="android.permission.MEDIA_CONTENT_CONTROL"/>
 
     <application
             android:allowBackup="true"
@@ -17,8 +16,7 @@
             android:supportsRtl="true"
             android:theme="@style/AppTheme"
             tools:ignore="GoogleAppIndexingWarning">
-
-        <!--activities-->
+        <!-- activities -->
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -27,8 +25,8 @@
             </intent-filter>
         </activity>
 
-        <!--Services-->
-        <service android:name=".services.MediaPlayerService" />
+        <!-- Services -->
+        <service android:name=".services.MediaPlayerService"/>
     </application>
 
 </manifest>
