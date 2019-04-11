@@ -48,10 +48,10 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             stopSelf()
         }
 
-        if (mediaPlayer == null && !mediaFile.equals("")){
+        if (mediaFile != null && !mediaFile.equals("")){
             initMediaPlayer()
         } else {
-            Log.i(TAG, "either media play is not null or media file is empty")
+            Log.i(TAG, "file link is null")
         }
 
         return super.onStartCommand(intent, flags, startId)

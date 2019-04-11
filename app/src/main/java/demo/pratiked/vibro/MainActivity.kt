@@ -35,7 +35,23 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        unbindService(serviceConnection)
+        if (serviceBound) {
+            unbindService(serviceConnection);
+            player!!.stopSelf()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle?) {
+
+        outState!!.putBoolean("ServiceState", serviceBound)
+
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
+        super.onRestoreInstanceState(savedInstanceState)
+
+        serviceBound = savedInstanceState!!.getBoolean("ServiceState")
     }
 
     //Binding this Client to the AudioPlayer Service
