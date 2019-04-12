@@ -9,8 +9,10 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
+import demo.pratiked.vibro.models.Audio
 import demo.pratiked.vibro.services.MediaPlayerService
-
+import android.provider.MediaStore
+import android.content.ContentResolver
 
 
 class MainActivity : AppCompatActivity() {
@@ -21,6 +23,7 @@ class MainActivity : AppCompatActivity() {
 
     private var player: MediaPlayerService? = null
     private var serviceBound = false
+    private var audioList = ArrayList<Audio>()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +32,14 @@ class MainActivity : AppCompatActivity() {
 
         Log.i(TAG, "onCreate")
 
-        playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg")
+        //playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg")
+
+        getLocalAudio()
+        Log.i(TAG, "Local audios: " + audioList.size)
+        if (audioList.size > 0){
+            playAudio(audioList[0].data!!)
+        }
+
     }
 
     override fun onDestroy() {
@@ -84,6 +94,51 @@ class MainActivity : AppCompatActivity() {
             //Service is active
             //Send media with BroadcastReceiver
         }
+    }
+
+    private fun getLocalAudio() {
+
+        val contentResolver = contentResolver
+
+        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0"
+        val sortOrder = MediaStore.Audio.Media.TITLE + " ASC"
+        val cursor = contentResolver.query(uri, null, selection, null, sortOrder)
+
+        if (cursor != null && cursor.count > 0) {
+            audioList = ArrayList()
+            while (cursor.moveToNext()) {
+
+                val isMusic = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC))
+                //1 - true and 0 - false
+                if (isMusic != null && isMusic == "1"){
+
+                    val data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
+                    val title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
+                    val album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM))
+                    val artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
+                    val composer = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.COMPOSER))
+                    val displayName = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME))
+                    val duration = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION))
+                    val mimeType = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.MIME_TYPE))
+                    val size = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.SIZE))
+
+                    Log.i(TAG, "" + data)
+                    Log.i(TAG, "" + title)
+                    Log.i(TAG, "" + album)
+                    Log.i(TAG, "" + artist)
+                    Log.i(TAG, "" + composer)
+                    Log.i(TAG, "" + displayName)
+                    Log.i(TAG, "" + duration)
+                    Log.i(TAG, "" + mimeType)
+                    Log.i(TAG, "" + size)
+
+                    // Save to audioList
+                    audioList.add(Audio(data, title, album, artist, composer, displayName, duration, mimeType, size))
+                }
+            }
+        }
+        cursor!!.close()
     }
 
 }
