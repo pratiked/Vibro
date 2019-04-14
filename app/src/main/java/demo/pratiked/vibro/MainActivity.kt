@@ -13,6 +13,9 @@ import demo.pratiked.vibro.models.Audio
 import demo.pratiked.vibro.services.MediaPlayerService
 import android.provider.MediaStore
 import android.content.ContentResolver
+import android.support.v7.widget.LinearLayoutManager
+import demo.pratiked.vibro.adapters.AudioAdapter
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 class MainActivity : AppCompatActivity() {
@@ -36,6 +39,9 @@ class MainActivity : AppCompatActivity() {
 
         getLocalAudio()
         Log.i(TAG, "Local audios: " + audioList.size)
+
+        rv_audios.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        rv_audios.adapter = AudioAdapter(audioList)
         if (audioList.size > 0){
             playAudio(audioList[0].data!!)
         }
