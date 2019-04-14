@@ -1,8 +1,10 @@
 package demo.pratiked.vibro.services
 
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -12,6 +14,13 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import java.io.IOException
+import android.telephony.TelephonyManager
+import android.telephony.PhoneStateListener
+import android.system.Os.listen
+
+
+
+
 
 class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCompletionListener,
     MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener,
@@ -28,6 +37,9 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     private var resumePosition: Int = 0
     private var audioManager: AudioManager? = null
     private var mAudioFocusRequest: AudioFocusRequest? = null
+    private var ongoingCall = false
+    private var phoneStateListener: PhoneStateListener? = null
+    private var telephonyManager: TelephonyManager? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
@@ -277,6 +289,56 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         } else {
             return false
         }
+    }
+
+    private val becomingNoisyReceiver = object : BroadcastReceiver() {
+
+        override fun onReceive(context: Context, intent: Intent) {
+            //pause audio on ACTION_AUDIO_BECOMING_NOISY
+            pauseMedia()
+            //buildNotification(PlaybackStatus.PAUSED);
+        }
+    }
+
+    private fun registerBecomingNoisyReceiver() {
+        //register after getting audio focus
+        val intentFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        registerReceiver(becomingNoisyReceiver, intentFilter)
+    }
+
+    //Handle incoming phone calls
+    private fun callStateListener() {
+
+        // Get the telephony manager
+        telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        //Starting listening for PhoneState changes
+        phoneStateListener = object : PhoneStateListener() {
+
+            override fun onCallStateChanged(state: Int, incomingNumber: String) {
+                when (state) {
+                    //if at least one call exists or the phone is ringing
+                    //pause the MediaPlayer
+                    TelephonyManager.CALL_STATE_OFFHOOK, TelephonyManager.CALL_STATE_RINGING -> if (mediaPlayer != null) {
+                        pauseMedia()
+                        ongoingCall = true
+                    }
+                    TelephonyManager.CALL_STATE_IDLE ->
+                        // Phone idle. Start playing.
+                        if (mediaPlayer != null) {
+                            if (ongoingCall) {
+                                ongoingCall = false
+                                resumeMedia()
+                            }
+                        }
+                }
+            }
+        }
+        // Register the listener with the telephony manager
+        // Listen for changes to the device call state.
+        telephonyManager!!.listen(
+            phoneStateListener,
+            PhoneStateListener.LISTEN_CALL_STATE
+        )
     }
 
     /*
