@@ -76,6 +76,21 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         return super.onStartCommand(intent, flags, startId)
     }
 
+    override fun onCreate() {
+        super.onCreate()
+
+        // Perform one-time setup procedures
+
+        // Manage incoming phone calls during playback.
+        // Pause MediaPlayer on incoming call,
+        // Resume on hangup.
+        callStateListener()
+        //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
+        registerBecomingNoisyReceiver()
+        //Listen for new Audio to play -- BroadcastReceiver
+        registerPlayNewAudio()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
@@ -86,6 +101,21 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
         //todo
         //removeAudioFocus()
+
+        //Disable the PhoneStateListener
+        if (phoneStateListener != null) {
+            telephonyManager!!.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE)
+        }
+
+        //todo
+        //removeNotification()
+
+        //unregister BroadcastReceivers
+        unregisterReceiver(becomingNoisyReceiver)
+        unregisterReceiver(playNewAudio)
+
+        //clear cached playlist
+        StorageUtil(applicationContext).clearCachedAudioPlaylist()
     }
 
     override fun onBind(intent: Intent?): IBinder? {
