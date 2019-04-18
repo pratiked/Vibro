@@ -12,13 +12,17 @@ import android.widget.Toast
 import demo.pratiked.vibro.models.Audio
 import demo.pratiked.vibro.services.MediaPlayerService
 import android.provider.MediaStore
-import android.content.ContentResolver
 import android.support.v7.widget.LinearLayoutManager
 import demo.pratiked.vibro.adapters.AudioAdapter
 import kotlinx.android.synthetic.main.activity_main.*
+import demo.pratiked.vibro.utils.StorageUtil
+
+
 
 
 class MainActivity : AppCompatActivity() {
+
+    val BROADCAST_PLAY_NEW_AUDIO = "demo.pratiked.vibro.PlayNewAudio"
 
     companion object {
         private const val TAG = "MainActivity"
@@ -42,9 +46,10 @@ class MainActivity : AppCompatActivity() {
 
         rv_audios.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         rv_audios.adapter = AudioAdapter(audioList)
-        if (audioList.size > 0){
+
+        /*if (audioList.size > 0){
             playAudio(audioList[0].data!!)
-        }
+        }*/
 
     }
 
@@ -87,7 +92,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun playAudio(media: String) {
+    private fun playAudio(audioIndex: Int) {
+        //Check is service is active
+        if (!serviceBound) {
+            //Store Serializable audioList to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudio(audioList)
+            storage.storeAudioIndex(audioIndex)
+
+            val playerIntent = Intent(this, MediaPlayerService::class.java)
+            startService(playerIntent)
+            bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+        } else {
+            //Store the new audioIndex to SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudioIndex(audioIndex)
+
+            //Service is active
+            //Send a broadcast to the service -> PLAY_NEW_AUDIO
+            val broadcastIntent = Intent(BROADCAST_PLAY_NEW_AUDIO)
+            sendBroadcast(broadcastIntent)
+        }
+    }
+
+    /*private fun playAudio(media: String) {
         //Check is service is active
         if (!serviceBound) {
             Log.i(TAG, "service is not active")
@@ -100,7 +128,7 @@ class MainActivity : AppCompatActivity() {
             //Service is active
             //Send media with BroadcastReceiver
         }
-    }
+    }*/
 
     private fun getLocalAudio() {
 

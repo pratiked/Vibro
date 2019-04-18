@@ -17,9 +17,7 @@ import java.io.IOException
 import android.telephony.TelephonyManager
 import android.telephony.PhoneStateListener
 import android.system.Os.listen
-
-
-
+import demo.pratiked.vibro.models.Audio
 
 
 class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCompletionListener,
@@ -30,6 +28,12 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     companion object {
         private const val TAG = "MediaPlayerService"
     }
+
+    //List of available Audio files
+    private val audioList: ArrayList<Audio>? = null
+    private val audioIndex = -1
+    private val activeAudio: Audio? = null //an object of the currently playing audio
+
 
     private val iBinder = LocalBinder()
     private var mediaPlayer: MediaPlayer? = null
