@@ -16,8 +16,11 @@ import android.util.Log
 import java.io.IOException
 import android.telephony.TelephonyManager
 import android.telephony.PhoneStateListener
-import android.system.Os.listen
 import demo.pratiked.vibro.models.Audio
+import demo.pratiked.vibro.MainActivity
+import demo.pratiked.vibro.utils.StorageUtil
+
+
 
 
 class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCompletionListener,
@@ -31,8 +34,8 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
     //List of available Audio files
     private val audioList: ArrayList<Audio>? = null
-    private val audioIndex = -1
-    private val activeAudio: Audio? = null //an object of the currently playing audio
+    private var audioIndex = -1
+    private var activeAudio: Audio? = null //an object of the currently playing audio
 
 
     private val iBinder = LocalBinder()
@@ -343,6 +346,36 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             phoneStateListener,
             PhoneStateListener.LISTEN_CALL_STATE
         )
+    }
+
+    private val playNewAudio = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+
+            //Get the new media index form SharedPreferences
+            audioIndex = StorageUtil(applicationContext).loadAudioIndex()
+
+            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+                //index is in a valid range
+                activeAudio = audioList[audioIndex]
+            } else {
+                stopSelf()
+            }
+
+            //A PLAY_NEW_AUDIO action received
+            //reset mediaPlayer to play the new Audio
+            stopMedia()
+            mediaPlayer!!.reset()
+            initMediaPlayer()
+            //todo
+            //updateMetaData()
+            //buildNotification(PlaybackStatus.PLAYING)
+        }
+    }
+
+    private fun registerPlayNewAudio() {
+        //Register playNewMedia receiver
+        val filter = IntentFilter(MainActivity.BROADCAST_PLAY_NEW_AUDIO)
+        registerReceiver(playNewAudio, filter)
     }
 
     /*

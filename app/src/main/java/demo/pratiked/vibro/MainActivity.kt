@@ -22,10 +22,10 @@ import demo.pratiked.vibro.utils.StorageUtil
 
 class MainActivity : AppCompatActivity() {
 
-    val BROADCAST_PLAY_NEW_AUDIO = "demo.pratiked.vibro.PlayNewAudio"
 
     companion object {
         private const val TAG = "MainActivity"
+        const val BROADCAST_PLAY_NEW_AUDIO = "demo.pratiked.vibro.PlayNewAudio"
     }
 
     private var player: MediaPlayerService? = null
