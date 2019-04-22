@@ -19,8 +19,10 @@ import android.telephony.PhoneStateListener
 import demo.pratiked.vibro.models.Audio
 import demo.pratiked.vibro.MainActivity
 import demo.pratiked.vibro.utils.StorageUtil
-
-
+import android.media.session.MediaController.TransportControls
+import android.media.session.MediaSessionManager
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaSessionCompat
 
 
 class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCompletionListener,
@@ -31,6 +33,12 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     companion object {
         private const val TAG = "MediaPlayerService"
     }
+
+    val ACTION_PLAY = "demo.pratiked.vibro.services.audioplayer.ACTION_PLAY"
+    val ACTION_PAUSE = "demo.pratiked.vibro.services.audioplayer.ACTION_PAUSE"
+    val ACTION_PREVIOUS = "demo.pratiked.vibro.services.audioplayer.ACTION_PREVIOUS"
+    val ACTION_NEXT = "demo.pratiked.vibro.services.audioplayer.ACTION_NEXT"
+    val ACTION_STOP = "demo.pratiked.vibro.services.audioplayer.ACTION_STOP"
 
     //List of available Audio files
     private val audioList: ArrayList<Audio>? = null
@@ -47,6 +55,14 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     private var ongoingCall = false
     private var phoneStateListener: PhoneStateListener? = null
     private var telephonyManager: TelephonyManager? = null
+
+    //MediaSession
+    private val mediaSessionManager: MediaSessionManager? = null
+    private val mediaSession: MediaSessionCompat? = null
+    private val transportControls: MediaControllerCompat.TransportControls? = null
+
+    //AudioPlayer notification ID
+    private val NOTIFICATION_ID = 101
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
@@ -407,6 +423,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         val filter = IntentFilter(MainActivity.BROADCAST_PLAY_NEW_AUDIO)
         registerReceiver(playNewAudio, filter)
     }
+
 
     /*
     ***JAVA***
