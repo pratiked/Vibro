@@ -47,9 +47,9 @@ class MainActivity : AppCompatActivity() {
         rv_audios.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         rv_audios.adapter = AudioAdapter(audioList)
 
-        /*if (audioList.size > 0){
-            playAudio(audioList[0].data!!)
-        }*/
+        if (audioList.size > 0){
+            playAudio(0)
+        }
 
     }
 

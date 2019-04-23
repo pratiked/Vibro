@@ -37,21 +37,21 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         private const val TAG = "MediaPlayerService"
     }
 
-    val ACTION_PLAY = "demo.pratiked.vibro.services.audioplayer.ACTION_PLAY"
-    val ACTION_PAUSE = "demo.pratiked.vibro.services.audioplayer.ACTION_PAUSE"
-    val ACTION_PREVIOUS = "demo.pratiked.vibro.services.audioplayer.ACTION_PREVIOUS"
-    val ACTION_NEXT = "demo.pratiked.vibro.services.audioplayer.ACTION_NEXT"
-    val ACTION_STOP = "demo.pratiked.vibro.services.audioplayer.ACTION_STOP"
+    private val ACTION_PLAY = "demo.pratiked.vibro.services.audioplayer.ACTION_PLAY"
+    private val ACTION_PAUSE = "demo.pratiked.vibro.services.audioplayer.ACTION_PAUSE"
+    private val ACTION_PREVIOUS = "demo.pratiked.vibro.services.audioplayer.ACTION_PREVIOUS"
+    private val ACTION_NEXT = "demo.pratiked.vibro.services.audioplayer.ACTION_NEXT"
+    private val ACTION_STOP = "demo.pratiked.vibro.services.audioplayer.ACTION_STOP"
 
     //List of available Audio files
-    private val audioList: ArrayList<Audio>? = null
+    private var audioList: ArrayList<Audio>? = null
     private var audioIndex = -1
     private var activeAudio: Audio? = null //an object of the currently playing audio
 
 
     private val iBinder = LocalBinder()
     private var mediaPlayer: MediaPlayer? = null
-    private var mediaFile: String? = null
+    //private var mediaFile: String? = null
     private var resumePosition: Int = 0
     private var audioManager: AudioManager? = null
     private var mAudioFocusRequest: AudioFocusRequest? = null
@@ -73,7 +73,19 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
         //An audio file is passed to the service through putExtra()
         try {
-            mediaFile = intent!!.getStringExtra("media")
+            //mediaFile = intent!!.getStringExtra("media")
+
+            //Load data from SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            audioList = storage.loadAudio()
+            audioIndex = storage.loadAudioIndex()
+
+            if (audioIndex != -1 && audioIndex < audioList!!.size) {
+                //index is in a valid range
+                activeAudio = audioList!![audioIndex]
+            } else {
+                stopSelf()
+            }
         } catch (e: NullPointerException){
             Log.e(TAG, "NullPointerException: ", e)
             stopSelf()
@@ -86,11 +98,25 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             stopSelf()
         }
 
-        if (mediaFile != null && !mediaFile.equals("")){
+        /*if (mediaFile != null && !mediaFile.equals("")){
             initMediaPlayer()
         } else {
             Log.i(TAG, "file link is null")
+        }*/
+
+        if (mediaSessionManager == null){
+            try {
+                initMediaSession()
+                initMediaPlayer()
+            } catch (e: RemoteException) {
+                e.printStackTrace()
+                stopSelf()
+            }
+            buildNotification(Constants.PlaybackStatus.PLAYING)
         }
+
+        //Handle Intent action from MediaSession.TransportControls
+        handleIncomingActions(intent)
 
         return super.onStartCommand(intent, flags, startId)
     }
@@ -118,8 +144,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             mediaPlayer!!.release()
         }
 
-        //todo
-        //removeAudioFocus()
+        removeAudioFocus()
 
         //Disable the PhoneStateListener
         if (phoneStateListener != null) {
@@ -229,34 +254,6 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         stopSelf()
     }
 
-    /*
-    ***JAVA***
-    private void initMediaPlayer() {
-        mediaPlayer = new MediaPlayer();
-
-        mediaPlayer.setOnCompletionListener(this);
-        mediaPlayer.setOnErrorListener(this);
-        mediaPlayer.setOnPreparedListener(this);
-        mediaPlayer.setOnBufferingUpdateListener(this);
-        mediaPlayer.setOnSeekCompleteListener(this);
-        mediaPlayer.setOnInfoListener(this);
-
-        mediaPlayer.reset();
-
-        mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .build());
-        try {
-            mediaPlayer.setDataSource(mediaFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-            stopSelf();
-        }
-        mediaPlayer.prepareAsync();
-    }
-    */
-
     private fun initMediaPlayer() {
 
         Log.i(TAG, "initMediaPlayer")
@@ -281,7 +278,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
         try {
             // Set the data source to the mediaFile location
-            mediaPlayer!!.setDataSource(mediaFile)
+            mediaPlayer!!.setDataSource(activeAudio!!.data)
         } catch (e: IOException) {
             e.printStackTrace()
             stopSelf()
@@ -322,7 +319,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
             mAudioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                 .setAcceptsDelayedFocusGain(true)
@@ -405,7 +402,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
 
             if (audioIndex != -1 && audioIndex < audioList!!.size) {
                 //index is in a valid range
-                activeAudio = audioList[audioIndex]
+                activeAudio = audioList!![audioIndex]
             } else {
                 stopSelf()
             }
@@ -479,7 +476,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             override fun onStop() {
                 super.onStop()
                 //todo
-                //removeNotification();
+                //removeNotification()
                 //Stop the service
                 stopSelf()
             }
@@ -513,10 +510,10 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         if (audioIndex == audioList!!.size - 1) {
             //if last in playlist
             audioIndex = 0
-            activeAudio = audioList[audioIndex]
+            activeAudio = audioList!![audioIndex]
         } else {
             //get next in playlist
-            activeAudio = audioList[++audioIndex]
+            activeAudio = audioList!![++audioIndex]
         }
 
         //Update stored index
@@ -534,7 +531,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
             //if first in playlist
             //set index to the last of audioList
             audioIndex = audioList!!.size - 1
-            activeAudio = audioList[audioIndex]
+            activeAudio = audioList!![audioIndex]
         } else {
             //get previous in playlist
             activeAudio = audioList!![--audioIndex]
@@ -552,17 +549,17 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     private fun buildNotification(playbackStatus: Constants.PlaybackStatus) {
 
         var notificationAction = android.R.drawable.ic_media_pause//needs to be initialized
-        var play_pauseAction: PendingIntent? = null
+        var playPauseAction: PendingIntent? = null
 
         //Build a new notification according to the current state of the MediaPlayer
         if (playbackStatus === Constants.PlaybackStatus.PLAYING) {
             notificationAction = android.R.drawable.ic_media_pause
             //create the pause action
-            play_pauseAction = playbackAction(1)
+            playPauseAction = playbackAction(1)
         } else if (playbackStatus === Constants.PlaybackStatus.PAUSED) {
             notificationAction = android.R.drawable.ic_media_play
             //create the play action
-            play_pauseAction = playbackAction(0)
+            playPauseAction = playbackAction(0)
         }
 
         val largeIcon = BitmapFactory.decodeResource(
@@ -580,7 +577,7 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
                     playbackAction(3)).build()
 
             val actionPause: Notification.Action =
-                Notification.Action.Builder(notificationAction, "pause", play_pauseAction).build()
+                Notification.Action.Builder(notificationAction, "pause", playPauseAction).build()
 
             val actionNext: Notification.Action =
                 Notification.Action.Builder(android.R.drawable.ic_media_next, "next",
@@ -617,6 +614,20 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
+
+    private fun handleIncomingActions(playbackAction: Intent?) {
+        if (playbackAction == null || playbackAction.action == null) return
+
+        val actionString = playbackAction.action
+        when {
+            actionString!!.equals(ACTION_PLAY, ignoreCase = true) -> transportControls!!.play()
+            actionString.equals(ACTION_PAUSE, ignoreCase = true) -> transportControls!!.pause()
+            actionString.equals(ACTION_NEXT, ignoreCase = true) -> transportControls!!.skipToNext()
+            actionString.equals(ACTION_PREVIOUS, ignoreCase = true) -> transportControls!!.skipToPrevious()
+            actionString.equals(ACTION_STOP, ignoreCase = true) -> transportControls!!.stop()
+        }
+    }
+
     private fun playbackAction(actionNumber: Int): PendingIntent? {
         val playbackAction = Intent(this, MediaPlayerService::class.java)
         when (actionNumber) {
@@ -646,15 +657,6 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         return null
     }
 
-    /*
-    ***JAVA***
-    public class LocalBinder extends Binder {
-
-      public MediaPlayerService getService() {
-          return MediaPlayerService.this;
-      }
-    }
-    */
     inner class LocalBinder : Binder() {
 
         val service: MediaPlayerService
