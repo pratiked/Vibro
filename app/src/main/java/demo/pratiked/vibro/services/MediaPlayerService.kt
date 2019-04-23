@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -21,8 +22,11 @@ import demo.pratiked.vibro.MainActivity
 import demo.pratiked.vibro.utils.StorageUtil
 import android.media.session.MediaController.TransportControls
 import android.media.session.MediaSessionManager
+import android.os.RemoteException
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
+import demo.pratiked.vibro.R
 
 
 class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCompletionListener,
@@ -57,9 +61,9 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
     private var telephonyManager: TelephonyManager? = null
 
     //MediaSession
-    private val mediaSessionManager: MediaSessionManager? = null
-    private val mediaSession: MediaSessionCompat? = null
-    private val transportControls: MediaControllerCompat.TransportControls? = null
+    private var mediaSessionManager: MediaSessionManager? = null
+    private var mediaSession: MediaSessionCompat? = null
+    private var transportControls: MediaControllerCompat.TransportControls? = null
 
     //AudioPlayer notification ID
     private val NOTIFICATION_ID = 101
@@ -424,6 +428,90 @@ class MediaPlayerService: /*extends*/ Service(), /*implements*/ MediaPlayer.OnCo
         registerReceiver(playNewAudio, filter)
     }
 
+
+    @Throws(RemoteException::class)
+    private fun initMediaSession() {
+        if (mediaSessionManager != null) return  //mediaSessionManager exists
+
+        mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        // Create a new MediaSession
+        mediaSession = MediaSessionCompat(applicationContext, "AudioPlayer")
+        //Get MediaSessions transport controls
+        transportControls = mediaSession!!.controller.transportControls
+        //set MediaSession -> ready to receive media commands
+        mediaSession!!.isActive = true
+        //indicate that the MediaSession handles transport control commands
+        // through its MediaSessionCompat.Callback.
+        mediaSession!!.setFlags(MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
+
+        //Set mediaSession's MetaData
+        updateMetaData()
+
+        // Attach Callback to receive MediaSession updates
+        mediaSession!!.setCallback(object : MediaSessionCompat.Callback() {
+            // Implement callbacks
+            override fun onPlay() {
+                super.onPlay()
+                resumeMedia()
+                //todo
+                //buildNotification(PlaybackStatus.PLAYING);
+            }
+
+            override fun onPause() {
+                super.onPause()
+                pauseMedia()
+                //todo
+                //buildNotification(PlaybackStatus.PAUSED);
+            }
+
+            override fun onSkipToNext() {
+                super.onSkipToNext()
+                //todo
+                //skipToNext();
+                updateMetaData()
+                //todo
+                //buildNotification(PlaybackStatus.PLAYING);
+            }
+
+            override fun onSkipToPrevious() {
+                super.onSkipToPrevious()
+                //todo
+                //skipToPrevious();
+                updateMetaData()
+                //todo
+                //buildNotification(PlaybackStatus.PLAYING);
+            }
+
+            override fun onStop() {
+                super.onStop()
+                //todo
+                //removeNotification();
+                //Stop the service
+                stopSelf()
+            }
+
+            override fun onSeekTo(position: Long) {
+                super.onSeekTo(position)
+            }
+        })
+    }
+
+    private fun updateMetaData() {
+        val albumArt = BitmapFactory.decodeResource(
+            resources,
+            R.drawable.image
+        ) //replace with medias albumArt
+
+        // Update the current metadata
+        mediaSession!!.setMetadata(
+            MediaMetadataCompat.Builder()
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, activeAudio!!.artist)
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, activeAudio!!.album)
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeAudio!!.title)
+                .build()
+        )
+    }
 
     /*
     ***JAVA***
